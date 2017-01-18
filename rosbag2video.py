@@ -131,9 +131,26 @@ for files in range(0,len(opt_files)):
                         if not topic in p_avconv:
                             if opt_out_file=="":
                                 out_file = str(topic).replace("/", "")+".mp4"
+                                #out_file = str(topic).replace("/", "")+".mjpeg"
                             else:
                                 out_file = opt_out_file
-                            p_avconv[topic] = subprocess.Popen(['avconv','-r',str(opt_fps),'-an','-c','mjpeg','-f','mjpeg','-i','-',out_file],stdin=subprocess.PIPE)
+			    print '[MJPEG] Launching AVCONV process...'
+                            #subprocess.Popen(['bash','-c','echo asdfqwer qewr'])
+                            #subprocess.Popen(['bash','-c','ls'])
+                            #p_avconv[topic] = subprocess.Popen(['avconv','-r',str(opt_fps),'-an','-c','mjpeg','-f','mjpeg','-i','-',out_file],stdin=subprocess.PIPE)
+			    extra_avconv_params="-codec:v libx264 -preset medium -crf 10 "
+			    cmdline='avconv -r ' + str(opt_fps) + ' -an -c mjpeg -f mjpeg -i - ' + out_file
+			    cmdline='avconv -r ' + str(opt_fps) + ' -an -c mjpeg -qscale 32 -q:v 3 -f mjpeg -i - ' + out_file
+			    cmdline='avconv -r 25 -an -c:v mjpeg -f mjpeg -q:v 2 -qscale 2 -b 65536k -i - ' + out_file
+			    cmdline='ffmpeg -r 25 -an -f mjpeg -i - -b 65536k ' + out_file # works!!!
+			    cmdline='avconv -r 25 -an -f mjpeg -i - -b 65536k ' + out_file # works!!!
+			    cmdline='avconv -r 25 -an -f mjpeg -i - -b 20480k ' + extra_avconv_params + ' ' + out_file
+			    #cmdline='avconv -i - -r ' + str(opt_fps) + ' -an -c mjpeg -f mjpeg '  + extra_avconv_params + out_file
+                            #size = "1920x1080"
+			    #pix_fmt = "bgr24"
+			    #cmdline='avconv -r ' + str(opt_fps) + ' -an -f rawvideo -s ' + size + ' -pix_fmt ' + pix_fmt + ' -i - ' + out_file
+			    print 'Executing command line:', cmdline
+                            p_avconv[topic] = subprocess.Popen(['bash', '-c', cmdline], stdin=subprocess.PIPE)
                         p_avconv[topic].stdin.write(msg.data)                      
                         t_video[topic] += 1.0/opt_fps
                     if opt_display_images: 
@@ -176,7 +193,13 @@ for files in range(0,len(opt_files)):
                                 else:
                                     out_file = opt_out_file
                                 size = str(msg.width)+"x"+str(msg.height)
-                                p_avconv[topic] = subprocess.Popen(['avconv','-r',str(opt_fps),'-an','-f','rawvideo','-s',size,'-pix_fmt', pix_fmt,'-i','-',out_file],stdin=subprocess.PIPE)
+				print 'Launching AVCONV process...'
+			        cmdline='avconv -r ' + str(opt_fps) + ' -an -f rawvideo -s ' + size + ' -pix_fmt ' + pix_fmt + ' -i - ' + out_file
+			    	print 'Executing command line:', cmdline
+                            	p_avconv[topic] = subprocess.Popen(['bash', '-c', cmdline], stdin=subprocess.PIPE)
+                                #p_avconv[topic] = subprocess.Popen(['avconv','-r',str(opt_fps),'-an','-f','rawvideo','-s',size,'-pix_fmt', pix_fmt,'-i','-',out_file],stdin=subprocess.PIPE)
+                                #subprocess.Popen(['bash','-c','echo','avconv','-r',str(opt_fps),'-an','-c:v','libx264','-crf','10','-vb','64k','-f','h264','-s',size,'-pix_fmt', pix_fmt,'-i','-',out_file,'>','/tmp/qwer.txt'])
+                                #p_avconv[topic] = subprocess.Popen(['avconv','-r',str(opt_fps),'-an','-c:v','libx264','-crf','10','-vb','64k','-f','h264','-s',size,'-pix_fmt', pix_fmt,'-i','-',out_file],stdin=subprocess.PIPE)
                             p_avconv[topic].stdin.write(msg.data)                      
                             t_video[topic] += 1.0/opt_fps 
                         if opt_display_images:
