@@ -138,13 +138,13 @@ for files in range(0,len(opt_files)):
                             #subprocess.Popen(['bash','-c','echo asdfqwer qewr'])
                             #subprocess.Popen(['bash','-c','ls'])
                             #p_avconv[topic] = subprocess.Popen(['avconv','-r',str(opt_fps),'-an','-c','mjpeg','-f','mjpeg','-i','-',out_file],stdin=subprocess.PIPE)
-			    extra_avconv_params="-codec:v libx264 -preset medium -crf 10 "
+			    extra_avconv_params="-codec:v libx264 -preset medium -crf 10 "							# This one has been used for Garda FullHD images
 			    cmdline='avconv -r ' + str(opt_fps) + ' -an -c mjpeg -f mjpeg -i - ' + out_file
 			    cmdline='avconv -r ' + str(opt_fps) + ' -an -c mjpeg -qscale 32 -q:v 3 -f mjpeg -i - ' + out_file
 			    cmdline='avconv -r 25 -an -c:v mjpeg -f mjpeg -q:v 2 -qscale 2 -b 65536k -i - ' + out_file
 			    cmdline='ffmpeg -r 25 -an -f mjpeg -i - -b 65536k ' + out_file # works!!!
 			    cmdline='avconv -r 25 -an -f mjpeg -i - -b 65536k ' + out_file # works!!!
-			    cmdline='avconv -r 25 -an -f mjpeg -i - -b 20480k ' + extra_avconv_params + ' ' + out_file
+			    cmdline='avconv -r 25 -an -f mjpeg -i - -b 20480k ' + extra_avconv_params + ' ' + out_file				# This one has been used for Garda FullHD images
 			    #cmdline='avconv -i - -r ' + str(opt_fps) + ' -an -c mjpeg -f mjpeg '  + extra_avconv_params + out_file
                             #size = "1920x1080"
 			    #pix_fmt = "bgr24"
@@ -194,7 +194,10 @@ for files in range(0,len(opt_files)):
                                     out_file = opt_out_file
                                 size = str(msg.width)+"x"+str(msg.height)
 				print 'Launching AVCONV process...'
+				extra_avconv_params=" -b 1024k -codec:v libx264 -preset medium -crf 20 "						# Low quality settings (also for Garda mjpegs)
+				extra_avconv_params=" -b 65535k -codec:v libx264 -preset veryslow -crf 0 "						# This one has been used for FLIR 320x256 IR images
 			        cmdline='avconv -r ' + str(opt_fps) + ' -an -f rawvideo -s ' + size + ' -pix_fmt ' + pix_fmt + ' -i - ' + out_file
+				cmdline='avconv -r 30 -an -f rawvideo -s ' + size + ' -pix_fmt ' + pix_fmt + ' -i - ' + extra_avconv_params + ' ' + out_file # This one has been used for FLIR 320x256 IR images
 			    	print 'Executing command line:', cmdline
                             	p_avconv[topic] = subprocess.Popen(['bash', '-c', cmdline], stdin=subprocess.PIPE)
                                 #p_avconv[topic] = subprocess.Popen(['avconv','-r',str(opt_fps),'-an','-f','rawvideo','-s',size,'-pix_fmt', pix_fmt,'-i','-',out_file],stdin=subprocess.PIPE)
