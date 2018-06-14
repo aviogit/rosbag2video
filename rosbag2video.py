@@ -117,8 +117,13 @@ for files in range(0,len(opt_files)):
                     if opt_display_images:
                         np_arr = np.fromstring(msg.data, np.uint8)
                         cv_image = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
+                elif msg.format.find("jpeg")!=-1 :
+                    if opt_display_images:
+                        #### direct conversion to CV2 ####
+                        np_arr = np.fromstring(data.data, np.uint8)
+                        cv_image = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR) # OpenCV >= 3.0:
                 else:         
-                    print 'unsuportet format:', msg.format
+                    print 'unsupported format:', msg.format
                     exit(1)
                     
                 if len(msg.data)>0:                    
@@ -177,7 +182,7 @@ for files in range(0,len(opt_files)):
                         if opt_display_images:
                             cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
                     else:         
-                        print 'unsuportet encoding:', msg.encoding
+                        print 'unsupported encoding:', msg.encoding
                         exit(1)
                         
                     if len(msg.data)>0:                    
