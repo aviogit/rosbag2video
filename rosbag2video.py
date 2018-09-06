@@ -20,7 +20,25 @@ import cv2
 import numpy as np
 
 import shlex, subprocess
- 
+
+''' 
+        except IOError as e:
+                print("I/O error({0}): {1}".format(e.errno, e.strerror))
+        except ValueError as e:
+                print("Could not convert data to an integer: " . e)
+        except NameError as e:
+                print("NameError: ", e)
+        except RuntimeError as e:
+                print("RuntimeError: " . e)
+        except TypeError as e:
+                print("TypeError:", e)
+        except CvBridgeError as e:
+                print(e)
+        except:
+                print("Unexpected error:", sys.exc_info()[0])
+                raise
+'''
+
  
 opt_fps =25.0
 opt_out_file=""
@@ -100,42 +118,57 @@ print "using ",opt_fps," FPS"
 p_avconv = {}
 bridge = CvBridge()
 
+#load_flag = cv2.CV_LOAD_IMAGE_COLOR
+load_flag = cv2.IMREAD_COLOR
+
+frame_counter = 0
+
 for files in range(0,len(opt_files)):
     #First arg is the bag to look at
     bagfile = opt_files[files]
     #Go through the bag file
     bag = rosbag.Bag(bagfile)
     for topic, msg, t in bag.read_messages(connection_filter=filter_image_msgs):
-    #        print topic, 'at', str(t)#,'msg=', str(msg)
+        print "frame no.:", frame_counter, topic, 'at', str(t), 'fmt:', msg.format #, 'enc:', msg.encoding #,'msg=', str(msg)
+	frame_counter+=1
         try:
-            if msg.format.find("jpeg")!=-1 :
+            if msg.format.find("jpeg")!=-1:
                 if msg.format.find("8")!=-1 and (msg.format.find("rgb")!=-1 or msg.format.find("bgr")!=-1):
+                    #print "rgb or bgr 8"
                     if opt_display_images:
                         np_arr = np.fromstring(msg.data, np.uint8)
-                        cv_image = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
+                        cv_image = cv2.imdecode(np_arr, load_flag)
+                        #cv_image = bridge.imgmsg_to_cv2(msg, "rgb8")
                 elif msg.format.find("mono8")!=-1 :
+                    #print "mono8"
                     if opt_display_images:
                         np_arr = np.fromstring(msg.data, np.uint8)
-                        cv_image = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
+                        cv_image = cv2.imdecode(np_arr, load_flag)
                 elif msg.format.find("jpeg")!=-1 :
+                    #print "jpeg"
                     if opt_display_images:
                         #### direct conversion to CV2 ####
-                        np_arr = np.fromstring(data.data, np.uint8)
-                        cv_image = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR) # OpenCV >= 3.0:
+                        np_arr = np.fromstring(msg.data, np.uint8)
+                        cv_image = cv2.imdecode(np_arr, load_flag) # OpenCV >= 3.0:
                 else:         
                     print 'unsupported format:', msg.format
                     exit(1)
                     
-                if len(msg.data)>0:                    
-                    if not topic in t_first :
+                #print "len:", len(msg.data)
+                if len(msg.data)>0:
+                    if not topic in t_first:
                         t_first[topic] = t;
                         t_video[topic] = 0;
                         t_file[topic] = 0
                     t_file[topic] = (t-t_first[topic]).to_sec()
+
+                    #print "t: ", t.to_sec()
+                    #print "t_first:", t_first[topic].to_sec()
+
                     while t_video[topic]<t_file[topic]:
                         if not topic in p_avconv:
                             if opt_out_file=="":
-                                out_file = str(topic).replace("/", "")+".mp4"
+                                out_file = str(topic).replace("/", "-")+".mp4"
                                 #out_file = str(topic).replace("/", "")+".mjpeg"
                             else:
                                 out_file = opt_out_file
@@ -144,12 +177,13 @@ for files in range(0,len(opt_files)):
                             #subprocess.Popen(['bash','-c','ls'])
                             #p_avconv[topic] = subprocess.Popen(['avconv','-r',str(opt_fps),'-an','-c','mjpeg','-f','mjpeg','-i','-',out_file],stdin=subprocess.PIPE)
 			    extra_avconv_params="-codec:v libx264 -preset medium -crf 10 "							# This one has been used for Garda FullHD images
+			    extra_avconv_params="-codec:v libx264 -preset ultrafast -crf 25 "							# This one has been used for Garda FullHD images
 			    cmdline='avconv -r ' + str(opt_fps) + ' -an -c mjpeg -f mjpeg -i - ' + out_file
 			    cmdline='avconv -r ' + str(opt_fps) + ' -an -c mjpeg -qscale 32 -q:v 3 -f mjpeg -i - ' + out_file
-			    cmdline='avconv -r 25 -an -c:v mjpeg -f mjpeg -q:v 2 -qscale 2 -b 65536k -i - ' + out_file
-			    cmdline='ffmpeg -r 25 -an -f mjpeg -i - -b 65536k ' + out_file # works!!!
-			    cmdline='avconv -r 25 -an -f mjpeg -i - -b 65536k ' + out_file # works!!!
-			    cmdline='avconv -r 25 -an -f mjpeg -i - -b 20480k ' + extra_avconv_params + ' ' + out_file				# This one has been used for Garda FullHD images
+			    cmdline='avconv -r ' + str(opt_fps) + ' -an -c:v mjpeg -f mjpeg -q:v 2 -qscale 2 -b:v 65536k -i - ' + out_file
+			    cmdline='ffmpeg -r ' + str(opt_fps) + ' -an -f mjpeg -i - -b:v 65536k ' + out_file # works!!!
+			    cmdline='avconv -r ' + str(opt_fps) + ' -an -f mjpeg -i - -b:v 65536k ' + out_file # works!!!
+			    cmdline='avconv -r ' + str(opt_fps) + ' -an -f mjpeg -i - -b:v 20480k ' + extra_avconv_params + ' ' + out_file				# This one has been used for Garda FullHD images
 			    #cmdline='avconv -i - -r ' + str(opt_fps) + ' -an -c mjpeg -f mjpeg '  + extra_avconv_params + out_file
                             #size = "1920x1080"
 			    #pix_fmt = "bgr24"
@@ -163,24 +197,35 @@ for files in range(0,len(opt_files)):
                         key=cv2.waitKey(1)
                         if key==1048603:
                             exit(1);
-        except AttributeError:
-            try:    
+        except AttributeError as e:
+            try:
+                    #print "Exception error: ", e
+                    #print topic, 'at', str(t), 'fmt:', msg.format, 'enc:', msg.encoding #,'msg=', str(msg)
                     pix_fmt=""
                     if msg.encoding.find("mono8")!=-1 :
+                        #print "mono8 - gray"
                         pix_fmt = "gray"
                         #np_arr = np.fromstring(msg.data, np.uint8)
                         if opt_display_images: 
                             cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
                     elif msg.encoding.find("bgr8")!=-1 :
+                        #print "bgr8 - bgr24"
                         pix_fmt = "bgr24"
                         #np_arr = np.fromstring(msg.data, np.uint8)
                         if opt_display_images:
                             cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
                     elif msg.encoding.find("rgb8")!=-1 :
+                        #print "rgb8 - rgb24"
                         pix_fmt = "rgb24"
                         #np_arr = np.fromstring(msg.data, np.uint8)
                         if opt_display_images:
                             cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+                    elif msg.encoding.find("jpeg")!=-1 :
+                        #print "jpeg"
+                        if opt_display_images:
+                            #### direct conversion to CV2 ####
+                            np_arr = np.fromstring(msg.data, np.uint8)
+                            cv_image = cv2.imdecode(np_arr, load_flag) # OpenCV >= 3.0:
                     else:         
                         print 'unsupported encoding:', msg.encoding
                         exit(1)
@@ -194,7 +239,7 @@ for files in range(0,len(opt_files)):
                         while t_video[topic]<t_file[topic]:
                             if not topic in p_avconv:
                                 if opt_out_file=="":
-                                    out_file = str(topic).replace("/", "")+".mp4"
+                                    out_file = str(topic).replace("/", "-")+".mp4"
                                 else:
                                     out_file = opt_out_file
                                 size = str(msg.width)+"x"+str(msg.height)
@@ -215,7 +260,8 @@ for files in range(0,len(opt_files)):
                             key=cv2.waitKey(1)
                             if key==1048603:
                                 exit(1);
-            except AttributeError:
+            except AttributeError as e:
+		print "Another exception error:", e
                 # maybe theora packet
                 # theora not supportet
                 pass 
